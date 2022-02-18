@@ -1,0 +1,12 @@
+inputs:
+  ../scaled_histograms/mumu_nunuww_FULL_T1_12_6TeV.root:
+    title: "mumu_nunuww EFT f_{T1}=1e-12"
+  ../scaled_histograms/backgrounds/ggwpwm_6TeV.root:
+    title: "ggwpwm"
+  ../scaled_histograms/backgrounds/wpwmz_ztonunu_6TeV.root:
+    title: "wpwmz"
+  ../scaled_histograms/backgrounds/wzmunu_6TeV.root:
+    title: "wzmunu"
+  ../scaled_histograms/backgrounds/zzmumu_6TeV.root:
+    title: "zzmumu"
+output: results/backgrounds_signal.pdf

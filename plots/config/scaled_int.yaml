@@ -1,0 +1,6 @@
+inputs:
+  ../scaled_histograms/mumu_nunuww_INT_T1_12_6TeV.root:
+    title: "INT f_{T1}=1e-12"
+  ../scaled_histograms/mumu_nunuww_INT_T1_12_scaled_6TeV.root:
+    title: "INT f_{T1}=1e-12 (rescaled)"
+output: results/scaled_int.pdf

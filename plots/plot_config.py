@@ -10,6 +10,7 @@ def plot(paths: List[Path], out_name: str, titles: List[str] = None):
     if titles is None:
         titles = [f.GetName() for f in tfiles]
     keys = [k.GetName() for k in tfiles[0].GetListOfKeys()]
+    print(len(keys))
     for i, key in enumerate(keys):
         c = TCanvas("c", "hist")
         if len(tfiles) > 1:
@@ -27,19 +28,21 @@ def plot(paths: List[Path], out_name: str, titles: List[str] = None):
             leg.AddEntry(h1, titles[0])
             leg.AddEntry(h2, titles[1])
             rp.Draw()
+            rp.GetLowerRefGraph().SetMinimum(-3)
+            rp.GetLowerRefGraph().SetMaximum(3)
         else:
             for j, f in enumerate(tfiles):
                 h = f.Get(key)
-                if not isinstance(h, TH1):
-                    continue
-                if len(tfiles) == 1:
-                    h.SetStats(True)
-                h.Draw("sames,E")
-                if len(tfiles) == 1:
-                    gPad.Update()
-                h.SetLineColor(j+2)
-                if len(tfiles) > 1:
-                    leg.AddEntry(h, titles[j])
+                try:
+                    h.Draw("sames,E")
+                    if len(tfiles) == 1:
+                        gPad.Update()
+                    h.SetLineColor(j+2)
+                    if len(tfiles) > 1:
+                        leg.AddEntry(h, titles[j])
+                except:
+                    pass
+        print(i)
         if len(tfiles) > 1:
             leg.Draw()
         if i == 0:

@@ -101,7 +101,7 @@ def write_histogram(input, output):
     
     events = range(min(tree.GetEntries(),maxEvents))
     if has_rich:
-        events = progress(events, description=f"Writing to {output}...")
+        events = progress(events, description=f"Writing to {output.GetName()}...")
     for event in events:
         tree.GetEntry(event)
 

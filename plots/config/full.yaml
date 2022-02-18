@@ -1,0 +1,6 @@
+inputs:
+  ../scaled_histograms/mumu_nunuww_FULL_T1_13_6TeV.root:
+    title: "FULL f_{T1}=1e-13"
+  ../scaled_histograms/mumu_nunuww_INT+QUAD+SM_T1_13_6TeV.root:
+    title: "INT+QUAD+SM f_{T1}=1e-13"
+output: results/full.pdf
