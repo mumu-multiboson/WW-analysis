@@ -5,7 +5,9 @@ try:
     from rich.progress import track as progress
     has_rich=True
 except ImportError:
+    print('To include progress bar, run `pip install rich`')
     has_rich=False
+import yaml
 
 #---------------------------------------------------------
 from ROOT import *
@@ -28,7 +30,7 @@ def selector(input,cutString='x.PT>20'):
 
 #---------------------------------------------------------
 
-def getParents(p):
+def getParents(p, tree):
     result=[p]
 
     motherIndices=[]
@@ -36,12 +38,12 @@ def getParents(p):
         motherIndices.append(p.M1)
     if p.M2!=-1 and tree.Particle[p.M2].PID==p.PID:
         motherIndices.append(p.M2)
-    result+=[getParents(tree.Particle[i]) for i in motherIndices]
+    result+=[getParents(tree.Particle[i], tree) for i in motherIndices]
 
     return result
 
-def isBeamRemnant(p):
-    parents=getParents(p)
+def isBeamRemnant(p, tree):
+    parents=getParents(p, tree)
     while type(parents)==type([]): parents=parents[-1]
     return parents.Status==4
 
@@ -49,15 +51,9 @@ def isBeamRemnant(p):
 
 #---------------------------------------------------------
 
-if __name__=='__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('input')
-    parser.add_argument('output')
-    args = parser.parse_args()
-
-    f=TFile(args.input)
-    output=TFile(args.output,"RECREATE")	
+def write_histogram(input, output):
+    f=TFile(input)
+    output=TFile(output,"RECREATE")	
 
     tree=f.Get("Delphes")
 
@@ -105,7 +101,7 @@ if __name__=='__main__':
     
     events = range(min(tree.GetEntries(),maxEvents))
     if has_rich:
-        events = progress(events, description="Processing events...")
+        events = progress(events, description=f"Writing to {output}...")
     for event in events:
         tree.GetEntry(event)
 
@@ -180,7 +176,7 @@ if __name__=='__main__':
         beamRemnants=[]
         for p in tree.Particle:
             if p.Status==1 and abs(p.PID)==13:
-                if isBeamRemnant(p): beamRemnants.append(p)
+                if isBeamRemnant(p, tree): beamRemnants.append(p)
 
         electrons=selector(tree.Electron,'x.PT>5 and abs(x.Eta)<2')
         muons=selector(tree.Muon,'x.PT>5 and abs(x.Eta)<2')
@@ -212,3 +208,29 @@ if __name__=='__main__':
         for Z in Zs: h.Fill(Z.M())
     
     output.Write()
+
+
+if __name__=='__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input', nargs='*', help='List of madgraph output directories or root files.')
+    parser.add_argument('--output', '-o', nargs='*', default=[], help='List of output file names. By default, uses input names.')
+    parser.add_argument('--force_overwite', '-f', action='store_true')
+    args = parser.parse_args()
+
+    if len(args.output) > 0:
+        assert len(args.output) == len(args.input)
+    else:
+        hist_path = Path('histograms')
+        hist_path.mkdir(exist_ok=True, parents=True)
+        args.output = [str(hist_path / f'{Path(i).stem}.root') for i in args.input]
+    for i, o in zip(args.input, args.output):
+        if not args.force_overwite:
+            if Path(o).exists():
+                print(f'{o} already exists, skipping...')
+                continue
+        if Path(i).is_dir():
+            i = str(Path(i) / 'Events' / 'run_01' / 'unweighted_events.root')
+        write_histogram(i, o)
+
+    
