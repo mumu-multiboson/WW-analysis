@@ -1,6 +1,6 @@
 inputs:
-  ../scaled_histograms/p_INT_QUAD.root:
-    title: "INT+QUAD f_{T1}=1e-13"
   ../scaled_histograms/mumu_nunuww_INT_QUAD_T1_13_6TeV.root:
     title: "INT_QUAD f_{T1}=1e-13"
+  ../scaled_histograms/p_INT_QUAD.root:
+    title: "INT+QUAD f_{T1}=1e-13"
 output: results/int_quad.pdf

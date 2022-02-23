@@ -14,8 +14,9 @@ def scale(input_path: Path, output_path: Path, cross_section: float, luminosity:
     for key in keys:
         h = input_file.Get(key)
         h2 = h.Clone()
-        h2.Scale(luminosity * cross_section / h.GetEntries())
-        h2.Write()
+        if h.GetEntries() > 0:
+            h2.Scale(luminosity * cross_section / h.GetEntries())
+            h2.Write()
     output_file.Close()
 
 def main():

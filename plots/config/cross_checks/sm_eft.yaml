@@ -1,0 +1,6 @@
+inputs:
+  ../scaled_histograms/mumu_nunuww_SM_SM_6TeV.root:
+    title: "mumu_nunuww (SM)"
+  ../scaled_histograms/mumu_nunuww_EFT_SM_original_6TeV.root:
+    title: "mumu_nunuww (EFT model)"
+output: results/sm_eft.pdf

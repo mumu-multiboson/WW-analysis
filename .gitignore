@@ -1,3 +1,4 @@
 *.root
 histograms/
 *.pdf
+*.txt
