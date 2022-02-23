@@ -1,6 +1,10 @@
 maxEvents=9E9
 DEBUG=True
+from ast import Lambda
+from multiprocessing import Event
 from pathlib import Path
+from select import select
+from typing import Any, Dict, List, Tuple, Union
 try:
     from rich.progress import track as progress
     has_rich=True
@@ -8,7 +12,7 @@ except ImportError:
     print('To include progress bar, run `pip install rich`')
     has_rich=False
 import yaml
-
+import numpy as np
 #---------------------------------------------------------
 from ROOT import *
 
@@ -28,8 +32,6 @@ def parentConstructor(a,b):
 def selector(input,cutString='x.PT>20'):
     return [x for x in input if eval(cutString)]
 
-#---------------------------------------------------------
-
 def getParents(p, tree):
     result=[p]
 
@@ -47,11 +49,82 @@ def isBeamRemnant(p, tree):
     while type(parents)==type([]): parents=parents[-1]
     return parents.Status==4
 
-#---------------------------------------------------------
+def getWZQuarks(tree, p) -> Tuple:
+    if abs(p.PID) not in (23, 24):
+        return tuple()
+    D1 = tree.Particle[p.D1]
+    D2 = tree.Particle[p.D2]
+    if (abs(D1.PID) < 8) and (abs(D2.PID) < 8):
+        return (D1, D2)
+    quarks = getWZQuarks(tree, D1)
+    if len(quarks) == 0:
+        quarks = getWZQuarks(tree, D2)
+    return quarks
 
-#---------------------------------------------------------
+def deltaR(p1, p2):
+    dR = p1.P4().DeltaR(p2.P4())
+    return dR
 
-def write_histogram(input, output):
+
+class Cut:
+    def __init__(self, description: str, func: Lambda):
+        self.description = description
+        self.func = func
+
+    def apply(self, input_dict: Dict[str, Any]):
+        return self.func(input_dict)
+    
+    def __str__(self):
+        return self.description
+    
+class EventSelection:
+    def __init__(self, cuts: List[Cut], active_indices: Union[None, List[int]]):
+        self.cuts = cuts
+        if active_indices is None:
+            active_indices = [n for n in range(len(cuts))]
+        self.active_indices = active_indices
+        self.n_passed = np.zeros(len(cuts))
+        self.n_failed = np.zeros(len(cuts))
+        print('EVENT SELECTION:')
+        for i, c in enumerate(self.cuts):
+            if i in self.active_indices:
+                status = 'ON'
+            else:
+                status = 'OFF'
+            print(f'\t{i}: {c} -- {status}')
+        print()
+    
+    def apply(self, input_dict: Dict[str, Any]):
+        selected = True
+        for i, c in enumerate(self.cuts):
+            if i in self.active_indices:
+                if c.apply(input_dict):
+                    self.n_passed[i] += 1
+                else:
+                    selected = False
+                    self.n_failed[i] += 1
+                    break
+        return selected
+
+    def efficiency(self):
+        n_total = self.n_passed + self.n_failed
+        active_mask = n_total > 0
+        efficiency = np.full(len(self.cuts), fill_value=-1.0)
+        efficiency[active_mask] = self.n_passed[active_mask] / n_total[active_mask]
+        return efficiency
+    
+    def print_efficiency(self):
+        efficiency = self.efficiency()
+        print('EVENT SELECTION EFFICIENCY:')
+        for i, c in enumerate(self.cuts):
+            if i in self.active_indices:
+                eff_s = 'NA'
+                if efficiency[i] != -1.0:
+                    eff_s = f'{efficiency[i]:.2%}'
+                print(f'\t{i} -- {c}: {eff_s}')
+        print()
+
+def write_histogram(input, output, cut_indices: Union[None, List[int]]):
     f=TFile(input)
     output=TFile(output,"RECREATE")	
 
@@ -98,12 +171,76 @@ def write_histogram(input, output):
     T_missingEt = TH1F('T_missingEt', 'Truth_MissingEt;Et_miss(GeV);Events', 200, 0, 5000)
     T_missingE = TH1F('T_missingE', 'Truth_MissingE;E_miss(GeV);Events', 200, 0, 5000)
     T_missingM = TH1F('T_missingM', 'Truth_MissingM;M_miss(GeV);Events', 200, 0, 6000)
-    
+
+    T_V_qDeltaR = TH1F('T_V_qDeltaR', 'Truth_V_qDeltaR;\\DeltaR_{q1, q2};Events', 20, 0, 3.2)
+    T_V_q1_p = TH1F('T_V_q1_p', 'Truth_V_q1_p;P(GeV);Events', 30, 0, 4000)
+    T_V_q2_p = TH1F('T_V_q2_p', 'Truth_V_q2_p;P(GeV);Events', 30, 0, 4000)
+    T_V_cosTheta = TH1F('T_V_cosTheta', 'Truth_V_cosTheta;cos(\\theta);Events', 20, -1, 1)
+    T_VV_deltaR = TH1F('T_VV_deltaR', 'Truth_VV_deltaR;\\DeltaR{W/Z, W/Z};Events', 20, 0, 3.2)
+    T_VV_M = TH1F('T_VV_M', 'Truth_VV_M;M(GeV);Events', 20, 0, 6000)
+    T_VV_pT = TH1F('T_VV_pT', 'Truth_VV_pT;pT(GeV);Events', 20, 0, 6000)
+
+    T_nunu_M = TH1F('T_nunu_M', 'Truth_nunu_M; M_{\\nu\\nu}(GeV);Events', 20, 0, 6000)
+
+
     events = range(min(tree.GetEntries(),maxEvents))
     if has_rich:
         events = progress(events, description=f"Writing to {output.GetName()}...")
+
+    # Define event selection.
+    cuts = []
+    cuts.append(Cut('n(leptons) == 0', lambda d: d['leptons'] == 0))
+    cuts.append(Cut('n(hadronic W/Z) == 2', lambda d: len(d['hadronic_WZs']) == 2))
+    cuts.append(Cut('M(nunu) > 200 GeV', lambda d: d['mass_nunu'] > 200))
+    # cuts.append(Cut('|cos(theta_{W/Z})| < 0.8', lambda d: all(abs(d['hadronic_WZs'][i].P4().CosTheta()) < 0.8 for i in (0,1))))
+    selection = EventSelection(cuts, cut_indices)
     for event in events:
         tree.GetEntry(event)
+
+        # First, check if the event passes the selection.
+        hadronic_WZs = []
+        WZ_quarks = []
+        leptons = 0
+        neutrinos = []
+        for p in tree.Particle:
+            if abs(p.Status)==22 and abs(p.PID) in (23, 24):
+                quarks = getWZQuarks(tree, p)
+                if len(quarks) == 2:
+                    WZ_quarks.append(quarks)
+                    hadronic_WZs.append(p)
+            elif p.Status == 1 and abs(p.PID) in (11, 13):
+                leptons += 1
+            elif p.Status == 1 and abs(p.PID) in (12, 14, 16):
+                neutrinos.append(p)
+        mass_nunu = 0.0
+        if len(neutrinos) == 2:
+            mass_nunu = (neutrinos[0].P4() + neutrinos[1].P4()).M()
+    
+        input_dict = {'leptons': leptons,
+                        'hadronic_WZs': hadronic_WZs,
+                        'mass_nunu': mass_nunu,
+                        }
+        if not selection.apply(input_dict):
+            continue
+
+
+        # Second, fill histograms.
+        for WZ, quarks in zip(hadronic_WZs, WZ_quarks):
+            T_V_qDeltaR.Fill(deltaR(quarks[0], quarks[1]))
+            
+            p1 = quarks[0].P4().P()
+            p2 = quarks[1].P4().P()
+            T_V_q1_p.Fill(max(p1, p2))
+            T_V_q2_p.Fill(min(p1, p2))
+            T_V_cosTheta.Fill(WZ.P4().CosTheta())
+
+        T_VV_deltaR.Fill(deltaR(hadronic_WZs[0], hadronic_WZs[1]))
+        VV = hadronic_WZs[0].P4() + hadronic_WZs[1].P4()
+        T_VV_M.Fill(VV.M())
+        T_VV_pT.Fill(VV.Pt())
+
+        if len(neutrinos) == 2:
+            T_nunu_M.Fill(mass_nunu)
 
         electrons = 0
         muons = 0
@@ -158,6 +295,9 @@ def write_histogram(input, output):
                 neutrino_Px += p.Px
                 neutrino_Py += p.Py
                 neutrino_Pz += p.Pz
+
+        
+        
         T_e_multiplicity.Fill(electrons)
         T_mu_multiplicity.Fill(muons)
         T_W_multiplicity.Fill(W)
@@ -166,47 +306,8 @@ def write_histogram(input, output):
                   
         T_missingEt.Fill((neutrino_Px**2 + neutrino_Py**2)**.5)
         T_missingE.Fill((neutrino_Px**2 + neutrino_Py**2 + neutrino_Pz**2)**.5)
-
-        P4_f = TLorentzVector(0,0,0,0)
-        for i in final_P4:
-            P4_f = P4_f + i
-        missingMass = P4_i - P4_f
-        T_missingM.Fill(missingMass.M())
-	
-        beamRemnants=[]
-        for p in tree.Particle:
-            if p.Status==1 and abs(p.PID)==13:
-                if isBeamRemnant(p, tree): beamRemnants.append(p)
-
-        electrons=selector(tree.Electron,'x.PT>5 and abs(x.Eta)<2')
-        muons=selector(tree.Muon,'x.PT>5 and abs(x.Eta)<2')
-
-        #fMuons=selector(tree.Muon,'abs(x.Eta)>2')
-        #fMuons+=selector(tree.Electron,'abs(x.Eta)>2 and x.Particle.GetObject().PID==11 and x.Particle.GetObject().Status==1 and x.Particle.GetObject().M1<5')  #this is a hack - not a typo
-
-        leptons=electrons+muons
-
-        Zs=[]
-        consumed=[]
-        for i1 in range(len(leptons)-1):
-            if i1 in consumed: continue
-            l1=leptons[i1]
-            for i2 in range(i1+1,len(leptons)):
-                if i2 in consumed: continue
-                l2=leptons[i2]
-
-                #pdb.set_trace()
-                #print l1.Charge,l2.Charge #,l1.Charge!=-l2.Charge, (type(l1)==type(Electron())) != (type(l2)==type(Electron()))
-                if l1.Charge!=-l2.Charge: continue
-                if (type(l1)==type(Electron())) != (type(l2)==type(Electron())): continue
-
-                Z=parentConstructor(l1,l2)
-                #if 81<Z.M() and Z.M()<101:
-                Zs.append(Z)
-                consumed.append(i1)
-                consumed.append(i2)
-        for Z in Zs: h.Fill(Z.M())
     
+    selection.print_efficiency()
     output.Write()
 
 
@@ -214,23 +315,21 @@ if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('input', nargs='*', help='List of madgraph output directories or root files.')
-    parser.add_argument('--output', '-o', nargs='*', default=[], help='List of output file names. By default, uses input names.')
+    parser.add_argument('--output', '-o', help='Output directory', default='histograms')
     parser.add_argument('--force_overwite', '-f', action='store_true')
+    parser.add_argument('--cuts', '-c', type=lambda s: [int(item) for item in s.split(',')], help='"," delimited list of cut indices to use (starting from 0).', default=None)
     args = parser.parse_args()
 
-    if len(args.output) > 0:
-        assert len(args.output) == len(args.input)
-    else:
-        hist_path = Path('histograms')
-        hist_path.mkdir(exist_ok=True, parents=True)
-        args.output = [str(hist_path / f'{Path(i).stem}.root') for i in args.input]
-    for i, o in zip(args.input, args.output):
+    output_dir = Path(args.output)
+    output_dir.mkdir(exist_ok=True, parents=True)
+    output_paths = [str(output_dir / f'{Path(i).stem}.root') for i in args.input]
+    for i, o in zip(args.input, output_paths):
         if not args.force_overwite:
             if Path(o).exists():
                 print(f'{o} already exists, skipping...')
                 continue
         if Path(i).is_dir():
             i = str(Path(i) / 'Events' / 'run_01' / 'unweighted_events.root')
-        write_histogram(i, o)
+        write_histogram(i, o, args.cuts)
 
     
