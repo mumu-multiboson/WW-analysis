@@ -1,6 +1,3 @@
-maxEvents=9E9
-DEBUG=True
-from ast import Lambda
 from multiprocessing import Event
 from pathlib import Path
 from select import select
@@ -67,7 +64,7 @@ def deltaR(p1, p2):
 
 
 class Cut:
-    def __init__(self, description: str, func: Lambda):
+    def __init__(self, description: str, func):
         self.description = description
         self.func = func
 
@@ -124,7 +121,7 @@ class EventSelection:
                 print(f'\t{i} -- {c}: {eff_s}')
         print()
 
-def write_histogram(input, output, cut_indices: Union[None, List[int]]):
+def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int):
     f=TFile(input)
     output=TFile(output,"RECREATE")	
 
@@ -182,8 +179,11 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]]):
 
     T_nunu_M = TH1F('T_nunu_M', 'Truth_nunu_M; M_{\\nu\\nu}(GeV);Events', 20, 0, 6000)
 
-
-    events = range(min(tree.GetEntries(),maxEvents))
+    if n_events == -1:
+        n_events = tree.GetEntries()
+    else:
+        n_events = min(tree.GetEntries(), n_events)
+    events = range(n_events)
     if has_rich:
         events = progress(events, description=f"Writing to {output.GetName()}...")
 
@@ -318,6 +318,7 @@ if __name__=='__main__':
     parser.add_argument('--output', '-o', help='Output directory', default='histograms')
     parser.add_argument('--force_overwite', '-f', action='store_true')
     parser.add_argument('--cuts', '-c', type=lambda s: [int(item) for item in s.split(',')], help='"," delimited list of cut indices to use (starting from 0).', default=None)
+    parser.add_argument('--n_events', '-n', default=-1, type=int)
     args = parser.parse_args()
 
     output_dir = Path(args.output)
@@ -330,6 +331,6 @@ if __name__=='__main__':
                 continue
         if Path(i).is_dir():
             i = str(Path(i) / 'Events' / 'run_01' / 'unweighted_events.root')
-        write_histogram(i, o, args.cuts)
+        write_histogram(i, o, args.cuts, args.n_events)
 
     
