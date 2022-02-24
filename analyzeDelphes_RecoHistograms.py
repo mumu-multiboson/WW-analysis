@@ -138,8 +138,14 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         tree.GetEntry(event)
 
         # First, check if the event passes the selection.
-        n_leptons = len(tree.Electron) + len(tree.Muon)
-
+        n_leptons = 0
+        for e in tree.Electron:
+            if e.P4().P() > 3:
+                n_leptons += 1
+        for m in tree.Muon:
+            if m.P4().P() > 3:
+                n_leptons += 1
+                
         # Collect jets.
         jets = tree.VLCjetR12N2
         n_jets = len(jets)
