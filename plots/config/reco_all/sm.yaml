@@ -1,4 +1,5 @@
 inputs:
   ../all/mumu_nunuww_SM_6TeV.root:
     title: "mumu_nunuww"
-output: results/all/sm.pdf
+output: results/reco_all/sm.pdf
+normalize: True

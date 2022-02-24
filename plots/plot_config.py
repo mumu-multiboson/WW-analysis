@@ -5,7 +5,11 @@ import yaml
 
 gStyle.SetOptStat(1111)
 
-def plot(paths: List[Path], out_name: str, titles: List[str] = None):
+def normalize_h(h, normalize):
+    if normalize:
+        h.Scale(1./h.Integral())
+
+def plot(paths: List[Path], out_name: str, titles: List[str] = None, normalize: bool = False):
     tfiles = [TFile(str(p)) for p in paths]
     if titles is None:
         titles = [f.GetName() for f in tfiles]
@@ -21,7 +25,9 @@ def plot(paths: List[Path], out_name: str, titles: List[str] = None):
             h1 = tfiles[0].Get(key)
             if isinstance(h1, TH2):
                 continue
+            normalize_h(h1, normalize)
             h2 = tfiles[1].Get(key)
+            normalize_h(h2, normalize)
             h1.SetLineColor(2)
             h2.SetLineColor(3)
             rp = TRatioPlot(h1, h2)
@@ -33,6 +39,7 @@ def plot(paths: List[Path], out_name: str, titles: List[str] = None):
         else:
             for j, f in enumerate(tfiles):
                 h = f.Get(key)
+                normalize_h(h, normalize)
                 try:
                     h.Draw("sames,E")
                     if len(tfiles) == 1:
@@ -68,7 +75,8 @@ def main():
         paths.append(p)
         titles.append(config['inputs'][p]['title'])
 
-    plot(paths=paths, out_name=out_name, titles=titles)
+    Path(out_name).parent.mkdir(exist_ok=True, parents=True)
+    plot(paths=paths, out_name=out_name, titles=titles, normalize=config['normalize'])
 
 if __name__ == '__main__':
     main()

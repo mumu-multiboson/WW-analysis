@@ -21,15 +21,6 @@ except ImportError:
     has_rich=False
 
 import logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    filename='reco_hist.log',
-                    filemode='w')
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-console.setFormatter(formatter)
-logging.getLogger('').addHandler(console)
 
 def deltaR(p1, p2):
     dR = p1.P4().DeltaR(p2.P4())
@@ -114,16 +105,16 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
 
     tree=f.Get("Delphes")
 
-    h_missingE = TH1F('missingE', 'missingE;E_miss(GeV);Events', 200, 0, 5000)
-    h_missingM = TH1F('missingM', 'missingM;M_miss(GeV);Events', 200, 0, 5000)
+    h_missingE = TH1F('missingE', 'missingE;E_miss(GeV);Events', 20, 0, 5000)
+    h_missingM = TH1F('missingM', 'missingM;M_miss(GeV);Events', 20, 0, 5000)
 
     h_j1_cosTheta = TH1F('j1_cosTheta', 'j1_cosTheta;cos(\\theta);Events', 20, -1, 1)
     h_j2_cosTheta = TH1F('j2_cosTheta', 'j2_cosTheta;cos(\\theta);Events', 20, -1, 1)
-    h_j1_pT = TH1F('j1_pT', 'j1_pT;pT(GeV);Events', 20, 0, 6000)
-    h_j2_pT = TH1F('j2_pT', 'j2_pT;pT(GeV);Events', 20, 0, 6000)
+    h_j1_pT = TH1F('j1_pT', 'j1_pT;pT(GeV);Events', 20, 0, 1500)
+    h_j2_pT = TH1F('j2_pT', 'j2_pT;pT(GeV);Events', 20, 0, 1500)
     h_jj_deltaR = TH1F('jj_deltaR', 'jj_deltaR;\\DeltaR{j1, j2};Events', 20, 0, 3.2)
-    h_jj_M = TH1F('jj_M', 'jj_M;M(GeV);Events', 20, 0, 6000)
-    h_jj_pT = TH1F('jj_pT', 'jj_pT;pT(GeV);Events', 20, 0, 6000)
+    h_jj_M = TH1F('jj_M', 'jj_M;M(GeV);Events', 20, 0, 3000)
+    h_jj_pT = TH1F('jj_pT', 'jj_pT;pT(GeV);Events', 20, 0, 3000)
 
     h_n_jets = TH1F('n_jets', 'n_jets;multiplicity;Events', 5, -0.5, 4.5)
 
@@ -210,6 +201,16 @@ if __name__=='__main__':
     parser.add_argument('--n_events', '-n', default=-1, type=int)
     parser.add_argument('--energy', '-e', default=6, help='cm energy in TeV')
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    filename=str(Path(args.output)/'reco_hist.log'),
+                    filemode='w')
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
 
     cross_section_path = Path.cwd() / 'cross_section.yaml'
     luminosity_path = Path('lumi.yaml')
