@@ -1,0 +1,12 @@
+inputs:
+  ../3/mumu_nunuww_SM_6TeV.root:
+    title: "mumu_nunuww SM"
+  ../3/ggwpwm_6TeV.root:
+    title: "ggwpwm"
+  ../3/wpwmz_ztonunu_6TeV.root:
+    title: "wpwmz"
+  ../3/wzmunu_6TeV.root:
+    title: "wzmunu"
+  ../3/zzmumu_6TeV.root:
+    title: "zzmumu"
+output: results/3/backgrounds_signal.pdf

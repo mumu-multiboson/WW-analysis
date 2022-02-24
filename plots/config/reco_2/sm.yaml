@@ -1,0 +1,4 @@
+inputs:
+  ../2/mumu_nunuww_SM_6TeV.root:
+    title: "mumu_nunuww"
+output: results/2/sm.pdf

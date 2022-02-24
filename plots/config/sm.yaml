@@ -1,4 +1,0 @@
-inputs:
-  ../scaled_histograms/mumu_nunuww_SM_6TeV.root:
-    title: "mumu_nunuww"
-output: results/sm.pdf

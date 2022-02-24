@@ -1,5 +1,11 @@
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
+from functools import reduce
+from operator import mul
+from multiprocessing import Pool, Pipe
+from multiprocessing.connection import Connection
+from contextlib import ExitStack
+
 
 import numpy as np
 import yaml
@@ -7,14 +13,23 @@ from ROOT import *
 
 gSystem.Load("libDelphes")
 gStyle.SetOptStat(0)
-
 try:
-    from rich.progress import track as progress
+    from rich.progress import Progress
     has_rich=True
 except ImportError:
     print('To include progress bar, run `pip install rich`')
     has_rich=False
 
+import logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    filename='reco_hist.log',
+                    filemode='w')
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
 
 def deltaR(p1, p2):
     dR = p1.P4().DeltaR(p2.P4())
@@ -35,21 +50,23 @@ class Cut:
         return self.description
     
 class EventSelection:
-    def __init__(self, cuts: List[Cut], active_indices: Union[None, List[int]]):
+    def __init__(self, cuts: List[Cut], active_indices: Union[None, List[int]], pipe: Connection):
         self.cuts = cuts
         if active_indices is None:
             active_indices = [n for n in range(len(cuts))]
         self.active_indices = active_indices
         self.n_passed = np.zeros(len(cuts))
         self.n_failed = np.zeros(len(cuts))
-        print('EVENT SELECTION:')
+        self.pipe = pipe
+
+        msg = 'EVENT SELECTION:\n'
         for i, c in enumerate(self.cuts):
             if i in self.active_indices:
                 status = 'ON'
             else:
                 status = 'OFF'
-            print(f'\t{i}: {c} -- {status}')
-        print()
+            msg = msg + f'\t{i}: {c} -- {status}\n'
+        pipe.send(msg)
     
     def apply(self, input_dict: Dict[str, Any]):
         selected = True
@@ -70,16 +87,18 @@ class EventSelection:
         efficiency[active_mask] = self.n_passed[active_mask] / n_total[active_mask]
         return efficiency
     
-    def print_efficiency(self):
+    def efficiency_msg(self):
         efficiency = self.efficiency()
-        print('EVENT SELECTION EFFICIENCY:')
+        msg = 'EVENT SELECTION EFFICIENCY:\n'
         for i, c in enumerate(self.cuts):
             if i in self.active_indices:
                 eff_s = 'NA'
                 if efficiency[i] != -1.0:
                     eff_s = f'{efficiency[i]:.2%}'
-                print(f'\t{i} -- {c}: {eff_s}')
-        print()
+                msg = msg + f'\t{i} -- {c}: {eff_s}\n'
+        total_eff = reduce(mul, efficiency[efficiency != -1.0])
+        msg = msg + f'\ttotal: {total_eff:.2%}\n\n'
+        return msg
 
 def scale(f: TFile, luminosity: float, cross_section: float):
     keys = [k.GetName() for k in f.GetListOfKeys()]
@@ -89,7 +108,7 @@ def scale(f: TFile, luminosity: float, cross_section: float):
             h.Scale(luminosity * cross_section / h.GetEntries())
             h.Write("", TObject.kOverwrite)
 
-def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float):
+def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection):
     f=TFile(input)
     output=TFile(output,"RECREATE")	
 
@@ -114,8 +133,6 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
     else:
         n_events = min(tree.GetEntries(), n_events)
     events = range(n_events)
-    if has_rich:
-        events = progress(events, description=f"Writing to {output.GetName()}...")
 
     # Define event selection.
     cuts = []
@@ -123,8 +140,10 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
     cuts.append(Cut('n(jets) == 2', lambda d: d['n_jets'] == 2))
     cuts.append(Cut('M_miss > 200 GeV', lambda d: d['missing_mass'] > 200))
     cuts.append(Cut('|cos(theta_j)| < 0.8', lambda d: all(abs(d[f'jet_{i}'].P4().CosTheta()) < 0.8 for i in (1,2))))
-    selection = EventSelection(cuts, cut_indices)
+    cuts.append(Cut('pT_{leading jet} > 100 GeV', lambda d: d['jet_1'].PT > 100))
+    selection = EventSelection(cuts, cut_indices, std_pipe)
     for event in events:
+        pipe.send((n_events, 1))
         tree.GetEntry(event)
 
         # First, check if the event passes the selection.
@@ -173,7 +192,10 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
             h_missingE.Fill(nunu.E())
             h_missingM.Fill(missing_mass)
     
-    selection.print_efficiency()
+    pipe.close()
+    msg = selection.efficiency_msg()
+    std_pipe.send(msg)
+    
     output.Write()
     scale(output, luminosity, cross_section)
 
@@ -200,23 +222,56 @@ if __name__=='__main__':
     try:
         luminosity = luminosities[energy]
     except:
-        print(f'ERROR: "{energy}" [TeV] not found in {luminosity_path}!')
+        logging.error(f'"{energy}" [TeV] not found in {luminosity_path}!')
+        raise
 
     output_dir = Path(args.output)
     output_dir.mkdir(exist_ok=True, parents=True)
     output_paths = [str(output_dir / f'{Path(i).stem}.root') for i in args.input]
-    for i, o in zip(args.input, output_paths):
-        if not args.force_overwite:
-            if Path(o).exists():
-                print(f'{o} already exists, skipping...')
-                continue
-        if Path(i).is_dir():
-            i = str(Path(i) / 'Events' / 'run_01' / 'unweighted_events.root')
-        process = Path(o).stem
-        try:
-            cross_section = cross_sections[process]
-        except:
-            print(f'ERROR: "{process}" not found in {cross_section_path}!')
-        write_histogram(i, o, args.cuts, args.n_events, args.energy, luminosity, cross_section)
+
+    with ExitStack() as stack:
+        if has_rich:
+            progress = stack.enter_context(Progress(transient=True))
+
+        with Pool(10) as pool:
+            proc_args = []
+            pipes = []
+            tasks = []
+            std_pipes = []
+            for input, output in zip(args.input, output_paths):
+                if not args.force_overwite:
+                    if Path(output).exists():
+                        logging.info(f'{output} already exists, skipping...')
+                        continue
+                if Path(input).is_dir():
+                    input = str(Path(input) / 'Events' / 'run_01' / 'unweighted_events.root')
+                process = Path(output).stem
+                try:
+                    cross_section = cross_sections[process]
+                except:
+                    logging.error(f'"{process}" not found in {cross_section_path}!')
+                    raise
+                if has_rich:
+                    tasks.append(progress.add_task(f"Processing {Path(output).stem}..."))
+                p_output, p_input = Pipe()
+                pipes.append(p_output)
+                std_pipe_out, std_pipe_in = Pipe()
+                std_pipes.append(std_pipe_out)
+                proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in))
+
+            result = pool.starmap_async(write_histogram, proc_args)
+            while not result.ready():
+                # Update progressbar.
+                if has_rich:
+                    for i, (pipe, task) in enumerate(zip(pipes, tasks)):
+                        if pipe.poll():
+                            total, advance = pipe.recv()
+                            progress.update(task, total=total, advance=advance)
+                # Print info messages from processes.
+                for std_pipe, input in zip(std_pipes, args.input):
+                    if std_pipe.poll():
+                        msg = std_pipe.recv()
+                        logging.info(Path(input).stem)
+                        logging.info(msg)
 
     
