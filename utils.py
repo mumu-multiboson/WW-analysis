@@ -37,8 +37,10 @@ class Cut:
 class EventSelection:
     def __init__(self, cuts: List[Cut], active_indices: Union[None, List[int]], pipe: Connection):
         self.cuts = cuts
-        if active_indices is None:
+        if active_indices == 'all':
             active_indices = [n for n in range(len(cuts))]
+        elif active_indices == 'none':
+            active_indices = []
         self.active_indices = active_indices
         self.n_passed = np.zeros(len(cuts))
         self.n_failed = np.zeros(len(cuts))
@@ -104,9 +106,22 @@ def parse_args(func, default_out):
     parser.add_argument('--n_events', '-n', default=-1, type=int)
     parser.add_argument('--energy', '-e', default=6, help='cm energy in TeV')
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--all', action='store_true', help='use all cuts')
     args = parser.parse_args()
 
-    output_dir = Path(args.output) / str(args.cuts)
+    global has_rich
+    if args.debug:
+        has_rich = False
+
+    if args.cuts is None:
+        if args.all:
+            args.cuts = 'all'
+        else:
+            args.cuts = 'none'
+        s = args.cuts
+    else:
+        s = 's' + ''.join(str(i) for i in args.cuts)
+    output_dir = Path(args.output) / s
     output_dir.mkdir(exist_ok=True, parents=True)
 
     logging.basicConfig(level=logging.INFO,
@@ -133,8 +148,6 @@ def parse_args(func, default_out):
         logging.error(f'"{energy}" [TeV] not found in {luminosity_path}!')
         raise
 
-    output_dir = Path(args.output) / str(args.cuts)
-    output_dir.mkdir(exist_ok=True, parents=True)
     output_paths = [str(output_dir / f'{Path(i).stem}.root') for i in args.input]
 
     with ExitStack() as stack:

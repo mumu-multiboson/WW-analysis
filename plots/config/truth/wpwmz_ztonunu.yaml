@@ -1,0 +1,5 @@
+inputs:
+  ../truth_histograms/s01/wpwmz_ztonunu_6tev.root:
+    title: "wpwmz"
+output: results/truth/wpwmz_ztonunu.pdf
+normalize: false

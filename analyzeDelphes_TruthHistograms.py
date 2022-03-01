@@ -126,7 +126,8 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
     T_VV_M = TH1F('T_VV_M', 'Truth_VV_M;M(GeV);Events', 20, 0, 6000)
     T_VV_pT = TH1F('T_VV_pT', 'Truth_VV_pT;pT(GeV);Events', 20, 0, 6000)
 
-    T_nunu_M = TH1F('T_nunu_M', 'Truth_nunu_M; M_{\\nu\\nu}(GeV);Events', 20, 0, 6000)
+    T_nunu_M = TH1F('T_nunu_M', 'Truth_nunu_M; M_{\\nu\\nu}(GeV);Events', 20, 0, 400)
+    T_CMminusVV_M = TH1F('T_CMminusVV_M', 'Truth_CMminusVV_M; M_{CM - VV}(GeV);Events', 20, 0, 6000)
 
     if n_events == -1:
         n_events = tree.GetEntries()
@@ -146,7 +147,11 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         WZ_quarks = []
         leptons = 0
         neutrinos = []
+        photons = []
+        vis = []
         for p in tree.Particle:
+            if abs(p.Status) == 1 and abs(p.PID) not in (12, 14, 16):
+                vis.append(p.P4())
             if abs(p.Status)==22 and abs(p.PID) in (23, 24):
                 quarks = getWZQuarks(tree, p)
                 if len(quarks) == 2:
@@ -169,23 +174,31 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
 
 
         # Second, fill histograms.
-        for WZ, quarks in zip(hadronic_WZs, WZ_quarks):
-            T_V_qDeltaR.Fill(deltaR(quarks[0], quarks[1]))
-            
-            p1 = quarks[0].P4().P()
-            p2 = quarks[1].P4().P()
-            T_V_q1_p.Fill(max(p1, p2))
-            T_V_q2_p.Fill(min(p1, p2))
-            T_V_cosTheta.Fill(WZ.P4().CosTheta())
+        if len(hadronic_WZs) == 2:
+            for WZ, quarks in zip(hadronic_WZs, WZ_quarks):
+                T_V_qDeltaR.Fill(deltaR(quarks[0], quarks[1]))
+                
+                p1 = quarks[0].P4().P()
+                p2 = quarks[1].P4().P()
+                T_V_q1_p.Fill(max(p1, p2))
+                T_V_q2_p.Fill(min(p1, p2))
+                T_V_cosTheta.Fill(WZ.P4().CosTheta())
 
-        T_VV_deltaR.Fill(deltaR(hadronic_WZs[0], hadronic_WZs[1]))
-        VV = hadronic_WZs[0].P4() + hadronic_WZs[1].P4()
-        T_VV_M.Fill(VV.M())
-        T_VV_pT.Fill(VV.Pt())
+            T_VV_deltaR.Fill(deltaR(hadronic_WZs[0], hadronic_WZs[1]))
+            VV = hadronic_WZs[0].P4() + hadronic_WZs[1].P4()
+            T_VV_M.Fill(VV.M())
+            T_VV_pT.Fill(VV.Pt())
+        
+            CM = TLorentzVector()
+            CM.SetE(1e3 * energy) # TeV -> GeV
+            T_CMminusVV_M.Fill((CM - VV).M())
 
         if len(neutrinos) == 2:
             T_nunu_M.Fill(mass_nunu)
 
+        from functools import reduce
+        vis_P4 = reduce(lambda a,b: a+b, vis)
+        breakpoint()
         electrons = 0
         muons = 0
         W = 0
