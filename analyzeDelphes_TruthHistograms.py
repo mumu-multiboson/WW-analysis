@@ -1,20 +1,28 @@
-from multiprocessing import Event
 from pathlib import Path
-from select import select
 from typing import Any, Dict, List, Tuple, Union
-try:
-    from rich.progress import track as progress
-    has_rich=True
-except ImportError:
-    print('To include progress bar, run `pip install rich`')
-    has_rich=False
-import yaml
+from functools import reduce
+from operator import mul
+from multiprocessing import Pool, Pipe
+from multiprocessing.connection import Connection
+from contextlib import ExitStack
+
+
 import numpy as np
-#---------------------------------------------------------
+import yaml
 from ROOT import *
 
 gSystem.Load("libDelphes")
 gStyle.SetOptStat(0)
+try:
+    from rich.progress import Progress
+    has_rich=True
+except ImportError:
+    print('To include progress bar, run `pip install rich`')
+    has_rich=False
+
+import logging
+from utils import *
+from truth_selection import truth_cuts
 
 #---------------------------------------------------------
 #return TLorentzVector corresponding to sum of inputs
@@ -62,66 +70,7 @@ def deltaR(p1, p2):
     dR = p1.P4().DeltaR(p2.P4())
     return dR
 
-
-class Cut:
-    def __init__(self, description: str, func):
-        self.description = description
-        self.func = func
-
-    def apply(self, input_dict: Dict[str, Any]):
-        return self.func(input_dict)
-    
-    def __str__(self):
-        return self.description
-    
-class EventSelection:
-    def __init__(self, cuts: List[Cut], active_indices: Union[None, List[int]]):
-        self.cuts = cuts
-        if active_indices is None:
-            active_indices = [n for n in range(len(cuts))]
-        self.active_indices = active_indices
-        self.n_passed = np.zeros(len(cuts))
-        self.n_failed = np.zeros(len(cuts))
-        print('EVENT SELECTION:')
-        for i, c in enumerate(self.cuts):
-            if i in self.active_indices:
-                status = 'ON'
-            else:
-                status = 'OFF'
-            print(f'\t{i}: {c} -- {status}')
-        print()
-    
-    def apply(self, input_dict: Dict[str, Any]):
-        selected = True
-        for i, c in enumerate(self.cuts):
-            if i in self.active_indices:
-                if c.apply(input_dict):
-                    self.n_passed[i] += 1
-                else:
-                    selected = False
-                    self.n_failed[i] += 1
-                    break
-        return selected
-
-    def efficiency(self):
-        n_total = self.n_passed + self.n_failed
-        active_mask = n_total > 0
-        efficiency = np.full(len(self.cuts), fill_value=-1.0)
-        efficiency[active_mask] = self.n_passed[active_mask] / n_total[active_mask]
-        return efficiency
-    
-    def print_efficiency(self):
-        efficiency = self.efficiency()
-        print('EVENT SELECTION EFFICIENCY:')
-        for i, c in enumerate(self.cuts):
-            if i in self.active_indices:
-                eff_s = 'NA'
-                if efficiency[i] != -1.0:
-                    eff_s = f'{efficiency[i]:.2%}'
-                print(f'\t{i} -- {c}: {eff_s}')
-        print()
-
-def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int):
+def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection):
     f=TFile(input)
     output=TFile(output,"RECREATE")	
 
@@ -184,17 +133,12 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
     else:
         n_events = min(tree.GetEntries(), n_events)
     events = range(n_events)
-    if has_rich:
-        events = progress(events, description=f"Writing to {output.GetName()}...")
 
     # Define event selection.
-    cuts = []
-    cuts.append(Cut('n(leptons) == 0', lambda d: d['leptons'] == 0))
-    cuts.append(Cut('n(hadronic W/Z) == 2', lambda d: len(d['hadronic_WZs']) == 2))
-    cuts.append(Cut('M(nunu) > 200 GeV', lambda d: d['mass_nunu'] > 200))
     # cuts.append(Cut('|cos(theta_{W/Z})| < 0.8', lambda d: all(abs(d['hadronic_WZs'][i].P4().CosTheta()) < 0.8 for i in (0,1))))
-    selection = EventSelection(cuts, cut_indices)
+    selection = EventSelection(truth_cuts, cut_indices, std_pipe)
     for event in events:
+        pipe.send((n_events, 1))
         tree.GetEntry(event)
 
         # First, check if the event passes the selection.
@@ -307,30 +251,13 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         T_missingEt.Fill((neutrino_Px**2 + neutrino_Py**2)**.5)
         T_missingE.Fill((neutrino_Px**2 + neutrino_Py**2 + neutrino_Pz**2)**.5)
     
-    selection.print_efficiency()
+    pipe.close()
+    msg = selection.efficiency_msg()
+    std_pipe.send(msg)
+    
     output.Write()
+    scale(output, luminosity, cross_section)
 
 
 if __name__=='__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('input', nargs='*', help='List of madgraph output directories or root files.')
-    parser.add_argument('--output', '-o', help='Output directory', default='histograms')
-    parser.add_argument('--force_overwite', '-f', action='store_true')
-    parser.add_argument('--cuts', '-c', type=lambda s: [int(item) for item in s.split(',')], help='"," delimited list of cut indices to use (starting from 0).', default=None)
-    parser.add_argument('--n_events', '-n', default=-1, type=int)
-    args = parser.parse_args()
-
-    output_dir = Path(args.output)
-    output_dir.mkdir(exist_ok=True, parents=True)
-    output_paths = [str(output_dir / f'{Path(i).stem}.root') for i in args.input]
-    for i, o in zip(args.input, output_paths):
-        if not args.force_overwite:
-            if Path(o).exists():
-                print(f'{o} already exists, skipping...')
-                continue
-        if Path(i).is_dir():
-            i = str(Path(i) / 'Events' / 'run_01' / 'unweighted_events.root')
-        write_histogram(i, o, args.cuts, args.n_events)
-
-    
+    parse_args(write_histogram, 'truth_histograms')
