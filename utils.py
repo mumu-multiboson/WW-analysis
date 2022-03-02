@@ -99,12 +99,12 @@ def scale(f: TFile, luminosity: float, cross_section: float):
 def parse_args(func, default_out):
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('input', nargs='*', help='List of madgraph output directories or root files.')
+    parser.add_argument('input', nargs='+', help='List of madgraph output directories or root files.')
     parser.add_argument('--output', '-o', help='Output directory', default=default_out)
     parser.add_argument('--force_overwite', '-f', action='store_true')
     parser.add_argument('--cuts', '-c', type=lambda s: [int(item) for item in s.split(',')], help='"," delimited list of cut indices to use (starting from 0).', default=None)
     parser.add_argument('--n_events', '-n', default=-1, type=int)
-    parser.add_argument('--energy', '-e', default=6, help='cm energy in TeV')
+    parser.add_argument('--energy', '-e', default=6, help='cm energy in TeV', type=int)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--all', action='store_true', help='use all cuts')
     args = parser.parse_args()
