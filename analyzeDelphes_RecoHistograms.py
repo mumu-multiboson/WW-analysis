@@ -32,7 +32,7 @@ def deltaR(p1, p2):
 def cosTheta(jet):
     return jet.P4().CosTheta()
 
-def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection):
+def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, debug: bool = False):
     f=TFile(input)
     output=TFile(output,"RECREATE")	
 
@@ -64,7 +64,8 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
     # Define event selection.
     selection = EventSelection(reco_cuts, cut_indices, std_pipe)
     for event in events:
-        pipe.send((n_events, 1))
+        if not debug:
+            pipe.send((n_events, 1))
         tree.GetEntry(event)
 
         # First, check if the event passes the selection.
@@ -124,9 +125,10 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
             h_missingE.Fill(nunu.E())
             h_missingM.Fill(missing_mass)
     
-    pipe.close()
-    msg = selection.efficiency_msg()
-    std_pipe.send(msg)
+    if not debug:
+        pipe.close()
+        msg = selection.efficiency_msg()
+        std_pipe.send(msg)
     
     output.Write()
     scale(output, luminosity, cross_section)

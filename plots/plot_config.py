@@ -10,6 +10,7 @@ def normalize_h(h, normalize):
         h.Scale(1./h.Integral())
 
 def plot(paths: List[Path], out_name: str, titles: List[str] = None, normalize: bool = False):
+    breakpoint()
     tfiles = [TFile(str(p)) for p in paths]
     if titles is None:
         titles = [f.GetName() for f in tfiles]
@@ -74,7 +75,9 @@ def main():
     for p in config['inputs']:
         paths.append(p)
         titles.append(config['inputs'][p]['title'])
-
+    if 'prefix' in config:
+        prefix = Path(config['prefix'])
+        paths = [prefix / p for p in paths]
     Path(out_name).parent.mkdir(exist_ok=True, parents=True)
     plot(paths=paths, out_name=out_name, titles=titles, normalize=config['normalize'])
 

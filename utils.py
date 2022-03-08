@@ -93,7 +93,7 @@ def scale(f: TFile, luminosity: float, cross_section: float):
         h = f.Get(key)
         if h.GetEntries() > 0:
             h.Scale(luminosity * cross_section / h.GetEntries())
-            h.Write("", TObject.kOverwrite)
+            h.Write(key, TObject.kOverwrite)
 
 
 def parse_args(func, default_out):
@@ -181,7 +181,7 @@ def parse_args(func, default_out):
                 proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in))
             if args.debug:
                 for p_args in proc_args:
-                    func(*p_args)
+                    func(*p_args, debug=True)
             else:
                 result = pool.starmap_async(func, proc_args)
                 while not result.ready():

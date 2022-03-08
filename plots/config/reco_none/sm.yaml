@@ -1,0 +1,6 @@
+prefix: ../reco_histograms/none
+inputs:
+  mumu_nunuww_SM_6TeV.root:
+    title: "mumu_nunuww"
+output: results/reco_none/sm.pdf
+normalize: True

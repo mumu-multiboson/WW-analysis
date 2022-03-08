@@ -1,13 +1,14 @@
+prefix: ../reco_histograms/none
 inputs:
-  ../1/mumu_nunuww_SM_6TeV.root:
+  mumu_nunuww_SM_6TeV.root:
     title: "mumu_nunuww SM"
-  ../1/ggwpwm_6tev.root:
+  ggwpwm_6tev.root:
     title: "ggwpwm"
-  ../1/wpwmz_ztonunu_6tev.root:
+  wpwmz_ztonunu_6tev.root:
     title: "wpwmz"
-  ../1/wzmunu_6tev.root:
+  wzmunu_6tev.root:
     title: "wzmunu"
-  ../1/zzmumu_6tev.root:
+  zzmumu_6tev.root:
     title: "zzmumu"
 output: results/reco_none/backgrounds_signal.pdf
 normalize: True
