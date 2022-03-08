@@ -1,6 +1,5 @@
-*.root
-histograms/
 *.pdf
 *.txt
 *.log
 *.pyc
+truth/
