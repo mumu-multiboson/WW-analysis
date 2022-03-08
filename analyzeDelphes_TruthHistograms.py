@@ -198,7 +198,6 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
 
         from functools import reduce
         vis_P4 = reduce(lambda a,b: a+b, vis)
-        breakpoint()
         electrons = 0
         muons = 0
         W = 0

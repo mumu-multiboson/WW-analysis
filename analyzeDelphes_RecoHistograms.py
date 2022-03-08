@@ -50,6 +50,9 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
     h_jj_pT = TH1F('jj_pT', 'jj_pT;pT(GeV);Events', 20, 0, 3000)
 
     h_n_jets = TH1F('n_jets', 'n_jets;multiplicity;Events', 5, -0.5, 4.5)
+    h_e_multiplicity = TH1F('e_multiplicity', 'Reco_electron;multiplicity;Events', 5, -.5, 4.5)
+    h_mu_multiplicity = TH1F('mu_multiplicity', 'Reco_muon;multiplicity;Events', 5, -.5, 4.5)
+    h_lepton_multiplicity = TH1F('lepton_multiplicity', 'Reco_lepton;multiplicity;Events', 5, -.5, 4.5)
 
 
     if n_events == -1:
@@ -65,14 +68,16 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         tree.GetEntry(event)
 
         # First, check if the event passes the selection.
-        n_leptons = 0
+        n_muons = 0
+        n_electrons = 0
         for e in tree.Electron:
-            if e.P4().P() > 3:
-                n_leptons += 1
+            # if e.P4().P() > 3:
+            n_electrons += 1
         for m in tree.Muon:
-            if m.P4().P() > 3:
-                n_leptons += 1
-                
+            # if m.P4().P() > 3:
+            n_muons += 1
+        n_leptons = n_muons + n_electrons
+
         # Collect jets.
         jets = tree.VLCjetR12N2
         n_jets = len(jets)
@@ -101,6 +106,9 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         
         # Second, fill histograms.
         h_n_jets.Fill(n_jets)
+        h_e_multiplicity.Fill(n_electrons)
+        h_mu_multiplicity.Fill(n_muons)
+        h_lepton_multiplicity.Fill(n_leptons)
         if jet_1:
             h_j1_cosTheta.Fill(cosTheta(jet_1))
             h_j1_pT.Fill(jet_1.PT)
