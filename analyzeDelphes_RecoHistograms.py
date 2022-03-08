@@ -129,7 +129,6 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         pipe.close()
         msg = selection.efficiency_msg()
         std_pipe.send(msg)
-    
     output.Write()
     scale(output, luminosity, cross_section)
 

@@ -83,7 +83,7 @@ class EventSelection:
                 if efficiency[i] != -1.0:
                     eff_s = f'{efficiency[i]:.2%}'
                 msg = msg + f'\t{i} -- {c}: {eff_s}\n'
-        total_eff = reduce(mul, efficiency[efficiency != -1.0])
+        total_eff = reduce(mul, efficiency[efficiency != -1.0], 1.0)
         msg = msg + f'\ttotal: {total_eff:.2%}\n\n'
         return msg
 

@@ -8,10 +8,10 @@ mumu_nunuww_INT_QUAD_T1_13_6TeV: 54.48
 mumu_nunuww_INT_T1_13_6TeV: 7.246
 mumu_nunuww_QUAD_T1_13_6TeV: 47.42
 mumu_nunuww_SM_6TeV: 270.7
-mumu_nunuww_INT_T1_12_6TeV: 73.57
-mumu_nunuww_QUAD_T1_12_6TeV: 4740
 mumu_nunuww_SM_SM_6TeV: 269.0
 mumu_nunuww_EFT_SM_original_6TeV: 261.1
+mumu_nunuww_INT_M0_12_6TeV: -1.237
+mumu_nunuww_QUAD_M0_12_6TeV: 143
 mumu_nunuww_INT_M1_12_6TeV: 1.49
 mumu_nunuww_QUAD_M1_12_6TeV: 26.91
 mumu_nunuww_INT_M7_12_6TeV: -0.9361
@@ -22,6 +22,7 @@ mumu_nunuww_INT_S1_12_6TeV: 7.853e-02
 mumu_nunuww_QUAD_S1_12_6TeV: 8.399
 mumu_nunuww_INT_T0_12_6TeV: 68.86
 mumu_nunuww_QUAD_T0_12_6TeV: 6876
+mumu_nunuww_INT_T1_12_6TeV: 73.57
+mumu_nunuww_QUAD_T1_12_6TeV: 4740
 mumu_nunuww_INT_T2_12_6TeV: 51.74
 mumu_nunuww_QUAD_T2_12_6TeV: 1560
-mumu_nunuww_QUAD_M0_12_6TeV: 143
