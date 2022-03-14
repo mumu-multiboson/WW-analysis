@@ -8,8 +8,6 @@ from pathlib import Path
 
 def rebin(root_files: Path, out_path: Path, var_name: str):
     out_path.mkdir(parents=True, exist_ok=True)
-    # variable of interest
-    var_name = "jj_M"
 
     # define the binning
     mjj_bins = array.array('d',[0,200,400,600,800,1000,1200,1500,2000,3000,4000,6000])
