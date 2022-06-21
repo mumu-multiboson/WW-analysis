@@ -82,17 +82,17 @@ class EventSelection:
                 eff_s = 'NA'
                 if efficiency[i] != -1.0:
                     eff_s = f'{efficiency[i]:.2%}'
-                msg = msg + f'\t{i} -- {c}: {eff_s}\n'
+                msg = msg + f'\t{i} -- {c}: {eff_s} ({self.n_passed[i]} / {self.n_passed[i] + self.n_failed[i]})\n'
         total_eff = reduce(mul, efficiency[efficiency != -1.0], 1.0)
         msg = msg + f'\ttotal: {total_eff:.2%}\n\n'
         return msg
 
-def scale(f: TFile, luminosity: float, cross_section: float):
+def scale(f: TFile, luminosity: float, cross_section: float, n_entries: int):
     keys = [k.GetName() for k in f.GetListOfKeys()]
     for key in keys:
         h = f.Get(key)
         if h.GetEntries() > 0:
-            h.Scale(luminosity * cross_section / h.GetEntries())
+            h.Scale(luminosity * cross_section / n_entries)
             h.Write(key, TObject.kOverwrite)
 
 
@@ -107,6 +107,7 @@ def parse_args(func, default_out):
     parser.add_argument('--energy', '-e', default=6, help='cm energy in TeV', type=int)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--all', action='store_true', help='use all cuts')
+    parser.add_argument('--ncpus', type=int, default=10, help='number of cpus to use')
     args = parser.parse_args()
 
     global has_rich
@@ -154,7 +155,7 @@ def parse_args(func, default_out):
         if has_rich:
             progress = stack.enter_context(Progress(transient=True))
 
-        with Pool(10) as pool:
+        with Pool(args.ncpus) as pool:
             proc_args = []
             pipes = []
             tasks = []

@@ -34,7 +34,9 @@ def cosTheta(jet):
 
 def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, debug: bool = False):
     f=TFile(input)
+    print(f'Writing to {output}...')
     output=TFile(output,"RECREATE")	
+    
 
     tree=f.Get("Delphes")
 
@@ -80,11 +82,11 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         n_leptons = n_muons + n_electrons
 
         # Collect jets.
-        jets = tree.VLCjetR12N2
+        jets = tree.VLCjetR10_inclusive
         n_jets = len(jets)
-        if n_jets == 2:
-            jet_1 = min(jets[0], jets[1], key=lambda j: j.PT)
-            jet_2 = max(jets[0], jets[1], key=lambda j: j.PT)
+        if n_jets >= 2:
+            jet_1 = jets[0]
+            jet_2 = jets[1]
             jj = jet_1.P4() + jet_2.P4()
             mass_jj = jj.M()
 
@@ -130,7 +132,7 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         msg = selection.efficiency_msg()
         std_pipe.send(msg)
     output.Write()
-    scale(output, luminosity, cross_section)
+    scale(output, luminosity, cross_section, tree.GetEntries())
 
 
 if __name__=='__main__':
