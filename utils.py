@@ -109,21 +109,6 @@ def parse_args(func, default_out):
     parser.add_argument('--all', action='store_true', help='use all cuts')
     parser.add_argument('--ncpus', type=int, default=10, help='number of cpus to use')
 
-
-    # reco cuts
-    # parser.add_argument('--max_leptons', type=int, default=0)
-    # parser.add_argument('--min_jets', type=int, default=2)
-    # parser.add_argument('--min_M_miss', type=int, default=200.)
-    # parser.add_argument('--max_cos_theta', type=int, default=0.8)
-    # parser.add_argument('--pt_min', type=int, default=100.)
-
-    # args = parser.parse_args()
-    # cut_values = {'max_leptons': args.max_leptons,
-    #             'min_jets': args.min_jets,
-    #             'min_M_miss': args.min_M_miss,
-    #             'max_cos_theta': args.max_cos_theta,
-    #             'pt_min': args.pt_min}
-
     args, unknown = parser.parse_known_args()
     cut_values = {arg.split('=')[0].lstrip('-'): arg.split('=')[1] for arg in unknown}
 

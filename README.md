@@ -19,3 +19,27 @@ lumi.yaml maps from energy in TeV (3, 6, 10, 30) to integrated luminosity. You c
 cross_section.yaml maps from the input process name to a cross section. The input process name is inferred from the stem of the input root file, or from the name of the directory, if a madgraph directory is specified.
 Cross sections should be in fb, luminosities should be in fb^-1
 If you specify multiple files, they will be run in parallel. Progress will be shown with a rich progress bar, if you have rich installed in your python environment.
+
+
+### Cut values
+You can specify cut values to `analyzeDelphes_RecoHistograms.py` using the variable names specified in `reco_selection.py`. For example, add the following to set the pt min to 200 GeV:
+```
+--pt_min=200
+```
+
+Note the `=`!
+
+## Condor submission
+To submit a histogramming job to condor, you can use `condor_submit.py` (assuming you have your environment set up for condor submission, and that you have set up your environment such that the usual histogram scripts are runnable). 
+
+Example:
+```
+python condor_submit.py --python_args "indir -f -o outdir -n 1000 -c 1,4 --ncpus 1"
+```
+
+To submit many jobs, you can write, e.g., a simple bash script:
+
+for PT_MIN in 100 200 300 400
+do
+    python condor_submit.py --python_args "indir -f -o outdir -n 1000 -c 1,4 --ncpus 1 --pt_min=$PT_MIN"
+done

@@ -136,5 +136,4 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
 
 
 if __name__=='__main__':
-    print('job alive')
     parse_args(write_histogram, 'reco_histograms')
