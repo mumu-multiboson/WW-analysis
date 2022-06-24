@@ -23,7 +23,7 @@ except ImportError:
 
 import logging
 from utils import *
-from reco_selection import reco_cuts
+from reco_selection import get_cuts
 
 def deltaR(p1, p2):
     dR = p1.P4().DeltaR(p2.P4())
@@ -32,7 +32,7 @@ def deltaR(p1, p2):
 def cosTheta(jet):
     return jet.P4().CosTheta()
 
-def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, debug: bool = False):
+def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, cut_values: dict = {}, debug: bool = False):
     f=TFile(input)
     print(f'Writing to {output}...')
     output=TFile(output,"RECREATE")	
@@ -64,7 +64,7 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
     events = range(n_events)
 
     # Define event selection.
-    selection = EventSelection(reco_cuts, cut_indices, std_pipe)
+    selection = EventSelection(get_cuts(**cut_values), cut_indices, std_pipe)
     for event in events:
         if not debug:
             pipe.send((n_events, 1))
@@ -136,4 +136,5 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
 
 
 if __name__=='__main__':
+    print('job alive')
     parse_args(write_histogram, 'reco_histograms')

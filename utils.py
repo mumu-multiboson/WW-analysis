@@ -101,14 +101,31 @@ def parse_args(func, default_out):
     parser = argparse.ArgumentParser()
     parser.add_argument('input', nargs='+', help='List of madgraph output directories or root files.')
     parser.add_argument('--output', '-o', help='Output directory', default=default_out)
-    parser.add_argument('--force_overwite', '-f', action='store_true')
+    parser.add_argument('--force_overwrite', '-f', action='store_true')
     parser.add_argument('--cuts', '-c', type=lambda s: [int(item) for item in s.split(',')], help='"," delimited list of cut indices to use (starting from 0).', default=None)
     parser.add_argument('--n_events', '-n', default=-1, type=int)
     parser.add_argument('--energy', '-e', default=6, help='cm energy in TeV', type=int)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--all', action='store_true', help='use all cuts')
     parser.add_argument('--ncpus', type=int, default=10, help='number of cpus to use')
-    args = parser.parse_args()
+
+
+    # reco cuts
+    # parser.add_argument('--max_leptons', type=int, default=0)
+    # parser.add_argument('--min_jets', type=int, default=2)
+    # parser.add_argument('--min_M_miss', type=int, default=200.)
+    # parser.add_argument('--max_cos_theta', type=int, default=0.8)
+    # parser.add_argument('--pt_min', type=int, default=100.)
+
+    # args = parser.parse_args()
+    # cut_values = {'max_leptons': args.max_leptons,
+    #             'min_jets': args.min_jets,
+    #             'min_M_miss': args.min_M_miss,
+    #             'max_cos_theta': args.max_cos_theta,
+    #             'pt_min': args.pt_min}
+
+    args, unknown = parser.parse_known_args()
+    cut_values = {arg.split('=')[0].lstrip('-'): arg.split('=')[1] for arg in unknown}
 
     global has_rich
     if args.debug:
@@ -135,8 +152,8 @@ def parse_args(func, default_out):
     console.setFormatter(formatter)
     logging.getLogger('').addHandler(console)
 
-    cross_section_path = Path.cwd() / 'cross_section.yaml'
-    luminosity_path = Path('lumi.yaml')
+    cross_section_path = Path(__file__).parent.absolute() / 'cross_section.yaml'
+    luminosity_path = Path(__file__).parent.absolute() / 'lumi.yaml'
     energy = args.energy
     
     with cross_section_path.open('r') as f:
@@ -161,7 +178,7 @@ def parse_args(func, default_out):
             tasks = []
             std_pipes = []
             for input, output in zip(args.input, output_paths):
-                if not args.force_overwite:
+                if not args.force_overwrite:
                     if Path(output).exists():
                         logging.info(f'{output} already exists, skipping...')
                         continue
@@ -179,7 +196,7 @@ def parse_args(func, default_out):
                 pipes.append(p_output)
                 std_pipe_out, std_pipe_in = Pipe()
                 std_pipes.append(std_pipe_out)
-                proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in))
+                proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in, cut_values))
             if args.debug:
                 for p_args in proc_args:
                     func(*p_args, debug=True)

@@ -4,3 +4,6 @@
 *.pyc
 truth/
 test*
+*.out
+*.err
+condor/*
