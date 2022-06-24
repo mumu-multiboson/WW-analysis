@@ -1,11 +1,11 @@
 from utils import Cut
 
-def get_cuts(max_leptons: int = 0, min_jets: int = 2, min_M_miss: float = 200., max_cos_theta: float = 0.8, pt_min: float = 100.):
-    # max_leptons = int(max_leptons)
-    # min_jets = int(min_jets)
-    # min_M_miss = float(min_M_miss)
-    # max_cos_theta = float(max_cos_theta)
-    # pt_min = float(pt_min)
+def get_cuts(max_leptons: str = '0', min_jets: str = '2', min_M_miss: str = '200', max_cos_theta: str = '0.8', pt_min: str = '100.'):
+    max_leptons = int(max_leptons)
+    min_jets = int(min_jets)
+    min_M_miss = float(min_M_miss)
+    max_cos_theta = float(max_cos_theta)
+    pt_min = float(pt_min)
     reco_cuts = []
     reco_cuts.append(Cut(f'n(leptons) <= {max_leptons}', lambda d: d['n_leptons'] <= max_leptons))
     reco_cuts.append(Cut(f'n(jets) >= {min_jets}', lambda d: d['n_jets'] >= min_jets))
