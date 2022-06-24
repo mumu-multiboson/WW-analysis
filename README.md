@@ -39,7 +39,9 @@ python condor_submit.py --python_args "indir -f -o outdir -n 1000 -c 1,4 --ncpus
 
 To submit many jobs, you can write, e.g., a simple bash script:
 
+```
 for PT_MIN in 100 200 300 400
 do
     python condor_submit.py --python_args "indir -f -o outdir -n 1000 -c 1,4 --ncpus 1 --pt_min=$PT_MIN"
 done
+```
