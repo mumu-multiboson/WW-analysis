@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import uuid
 import os
+import stat
 
 def main():
     parser = argparse.ArgumentParser()
@@ -29,7 +30,7 @@ def main():
     with run_file.open('w') as fd:
         fd.write(run_text)
     st = os.stat(run_file)
-    os.chmod(run_file, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    os.chmod(run_file, st.st_mode | os.stat.S_IXUSR | os.stat.S_IXGRP | os.stat.S_IXOTH)
 
     arguments = '$(ClusterId) $(ProcId)'
     output = f'{args.output_log}/$(ClusterId).$(ProcId).out'
