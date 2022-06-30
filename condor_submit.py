@@ -27,6 +27,8 @@ def main():
     run_file = (condor_dir / f'{unique_id}.sh').absolute()
     with run_file.open('w') as fd:
         fd.write(run_text)
+    st = os.stat(run_file)
+    os.chmod(run_file, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
     arguments = '$(ClusterId) $(ProcId)'
     output = f'{args.output_log}/$(ClusterId).$(ProcId).out'
