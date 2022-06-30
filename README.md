@@ -45,3 +45,14 @@ do
     python condor_submit.py --python_args "indir -f -o outdir -n 1000 -c 1,4 --ncpus 1 --pt_min=$PT_MIN"
 done
 ```
+
+where `indir` and `outdir` are replaced with *absolute* paths. Note that `indir` is a positional argument. If submitting multiple jobs in a loop, make sure to use a different output directory for each job, to avoid overwriting your results. 
+
+To test that your jobs will work correctly, you can try passing the `--python_args` to `analyzeDelphes_RecoHistograms.py` directly, to check that the job starts without error. For example:
+
+```
+python analyzeDelphes_RecoHistograms.py indir -f -o outdir -n 10 -c 1,4 --ncpus 1 --pt_min=$PT_MIN
+```
+
+where we have `-n 10` to ensure a fast job. You can check that this runs withotu error, and if so, submit larger condor jobs as described above.
+
