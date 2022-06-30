@@ -54,5 +54,5 @@ To test that your jobs will work correctly, you can try passing the `--python_ar
 python analyzeDelphes_RecoHistograms.py indir -f -o outdir -n 10 -c 1,4 --ncpus 1 --pt_min=$PT_MIN
 ```
 
-where we have `-n 10` to ensure a fast job. You can check that this runs withotu error, and if so, submit larger condor jobs as described above.
+where we have `-n 10` to ensure a fast job. You can check that this runs without error, and if so, submit larger condor jobs as described above.
 
