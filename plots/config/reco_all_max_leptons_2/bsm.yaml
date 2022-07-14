@@ -1,0 +1,6 @@
+inputs:
+  heavy_higgs_1000GeV_6TeV.root:
+    title: "mumu_nunuww"
+output: results/reco_1/heavy_higgs_1000GeV.pdf
+normalize: True
+prefix: bsm_truth/all

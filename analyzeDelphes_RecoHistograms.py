@@ -5,7 +5,7 @@ from operator import mul
 from multiprocessing import Pool, Pipe
 from multiprocessing.connection import Connection
 from contextlib import ExitStack
-
+import os
 
 import numpy as np
 import yaml
@@ -18,7 +18,7 @@ try:
     from rich.progress import Progress
     has_rich=True
 except ImportError:
-    print('To include progress bar, run `pip install rich`')
+    print('To include progress bar, run `python -m pip install --user rich`')
     has_rich=False
 
 import logging
@@ -32,7 +32,9 @@ def deltaR(p1, p2):
 def cosTheta(jet):
     return jet.P4().CosTheta()
 
-def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, cut_values: dict = {}, debug: bool = False):
+# csv_eff_output: Path = None, csv_abs_eff_output: Path = None, lock: Lock = None, 
+def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, cut_values: dict = {}, csv_eff_output: Path = None, csv_abs_eff_output: Path = None, lock = None, debug: bool = False):
+    process_name = Path(output).stem
     f=TFile(input)
     print(f'Writing to {output}...')
     output=TFile(output,"RECREATE")	
@@ -131,8 +133,28 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         pipe.close()
         msg = selection.efficiency_msg()
         std_pipe.send(msg)
+
+    def write_csv(out_path, relative):
+        if out_path:
+            csv = selection.efficiency_csv(relative=relative)
+            csv = process_name + ',' + csv + '\n'
+            print(f'writing {csv}')
+            print(out_path)
+            print(lock)
+            if not debug:
+                assert lock is not None
+                lock.acquire()
+            with out_path.open('a') as f:
+                f.write(csv)
+                f.flush()
+                os.fsync(f)
+            if not debug:
+                lock.release()
+    write_csv(out_path=csv_eff_output, relative=True)
+    write_csv(out_path=csv_abs_eff_output, relative=False)
+
     output.Write()
-    scale(output, luminosity, cross_section, tree.GetEntries())
+    scale(output, luminosity, cross_section, n_events)
 
 
 if __name__=='__main__':

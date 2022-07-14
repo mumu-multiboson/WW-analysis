@@ -10,7 +10,6 @@ def normalize_h(h, normalize):
         h.Scale(1./h.Integral())
 
 def plot(paths: List[Path], out_name: str, titles: List[str] = None, normalize: bool = False):
-    breakpoint()
     tfiles = [TFile(str(p)) for p in paths]
     if titles is None:
         titles = [f.GetName() for f in tfiles]

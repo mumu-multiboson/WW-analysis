@@ -22,7 +22,8 @@ except ImportError:
 
 import logging
 from utils import *
-from truth_selection import truth_cuts
+from truth_selection import get_cuts
+
 
 #---------------------------------------------------------
 #return TLorentzVector corresponding to sum of inputs
@@ -70,7 +71,7 @@ def deltaR(p1, p2):
     dR = p1.P4().DeltaR(p2.P4())
     return dR
 
-def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection):
+def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, cut_values: dict = {}, debug: bool = False):
     f=TFile(input)
     output=TFile(output,"RECREATE")	
 
@@ -137,9 +138,10 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
 
     # Define event selection.
     # cuts.append(Cut('|cos(theta_{W/Z})| < 0.8', lambda d: all(abs(d['hadronic_WZs'][i].P4().CosTheta()) < 0.8 for i in (0,1))))
-    selection = EventSelection(truth_cuts, cut_indices, std_pipe)
+    selection = EventSelection(get_cuts(**cut_values), cut_indices, std_pipe)
     for event in events:
-        pipe.send((n_events, 1))
+        if not debug:
+            pipe.send((n_events, 1))
         tree.GetEntry(event)
 
         # First, check if the event passes the selection.
@@ -263,12 +265,12 @@ def write_histogram(input, output, cut_indices: Union[None, List[int]], n_events
         T_missingEt.Fill((neutrino_Px**2 + neutrino_Py**2)**.5)
         T_missingE.Fill((neutrino_Px**2 + neutrino_Py**2 + neutrino_Pz**2)**.5)
     
-    pipe.close()
-    msg = selection.efficiency_msg()
-    std_pipe.send(msg)
-    
+    if not debug:
+        pipe.close()
+        msg = selection.efficiency_msg()
+        std_pipe.send(msg)
     output.Write()
-    scale(output, luminosity, cross_section)
+    scale(output, luminosity, cross_section, tree.GetEntries())
 
 
 if __name__=='__main__':
