@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 from functools import reduce
 from operator import mul
-from multiprocessing import Pool, Pipe
+from multiprocessing import Pool, Pipe, Manager
 from multiprocessing.connection import Connection
 from contextlib import ExitStack
 
@@ -67,25 +67,39 @@ class EventSelection:
                     break
         return selected
 
-    def efficiency(self):
+    def efficiency(self, relative=True):
         n_total = self.n_passed + self.n_failed
         active_mask = n_total > 0
         efficiency = np.full(len(self.cuts), fill_value=-1.0)
-        efficiency[active_mask] = self.n_passed[active_mask] / n_total[active_mask]
+        if relative:
+            efficiency[active_mask] = self.n_passed[active_mask] / n_total[active_mask]
+        else:
+            # absolute efficiency
+            efficiency[active_mask] = self.n_passed[active_mask] / n_total[self.active_indices[0]]
         return efficiency
     
     def efficiency_msg(self):
         efficiency = self.efficiency()
+        absolute_efficiency = self.efficiency(relative=False)
         msg = 'EVENT SELECTION EFFICIENCY:\n'
         for i, c in enumerate(self.cuts):
             if i in self.active_indices:
                 eff_s = 'NA'
                 if efficiency[i] != -1.0:
                     eff_s = f'{efficiency[i]:.2%}'
-                msg = msg + f'\t{i} -- {c}: {eff_s} ({self.n_passed[i]} / {self.n_passed[i] + self.n_failed[i]})\n'
+                abs_eff_s = 'NA'
+                if absolute_efficiency[i] != -1.0:
+                    abs_eff_s = f'{absolute_efficiency[i]:.2%}'
+                msg = msg + f'\t{i} -- {c}: {eff_s} ({self.n_passed[i]} / {self.n_passed[i] + self.n_failed[i]}, relative) {abs_eff_s} ({self.n_passed[i]} / {self.n_passed[self.active_indices[0]] + self.n_failed[self.active_indices[0]]}, absolute) \n'
         total_eff = reduce(mul, efficiency[efficiency != -1.0], 1.0)
         msg = msg + f'\ttotal: {total_eff:.2%}\n\n'
         return msg
+
+    def efficiency_csv(self, relative=True):
+        efficiency = self.efficiency(relative)
+        efficiency = [f'{e:.2%}' if e != -1.0 else 'NA' for e in efficiency ]
+        return ','.join(efficiency)
+        
 
 def scale(f: TFile, luminosity: float, cross_section: float, n_entries: int):
     keys = [k.GetName() for k in f.GetListOfKeys()]
@@ -137,6 +151,11 @@ def parse_args(func, default_out):
     console.setFormatter(formatter)
     logging.getLogger('').addHandler(console)
 
+    csv_eff_output = output_dir / 'relative_efficiency.csv'
+    csv_eff_output.unlink(missing_ok=True)
+    csv_abs_eff_output = output_dir / 'absolute_efficiency.csv'
+    csv_abs_eff_output.unlink(missing_ok=True)
+
     cross_section_path = Path(__file__).parent.absolute() / 'cross_section.yaml'
     luminosity_path = Path(__file__).parent.absolute() / 'lumi.yaml'
     energy = args.energy
@@ -157,6 +176,8 @@ def parse_args(func, default_out):
         if has_rich:
             progress = stack.enter_context(Progress(transient=True))
 
+        m = Manager()
+        lock = m.Lock()
         with Pool(args.ncpus) as pool:
             proc_args = []
             pipes = []
@@ -181,7 +202,7 @@ def parse_args(func, default_out):
                 pipes.append(p_output)
                 std_pipe_out, std_pipe_in = Pipe()
                 std_pipes.append(std_pipe_out)
-                proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in, cut_values))
+                proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in, cut_values, csv_eff_output, csv_abs_eff_output, lock))
             if args.debug:
                 for p_args in proc_args:
                     func(*p_args, debug=True)
