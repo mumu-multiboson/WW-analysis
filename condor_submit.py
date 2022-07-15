@@ -2,6 +2,8 @@ import argparse
 from pathlib import Path
 import subprocess
 import uuid
+import os
+import stat
 
 def main():
     parser = argparse.ArgumentParser()
