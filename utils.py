@@ -95,9 +95,12 @@ class EventSelection:
         msg = msg + f'\ttotal: {total_eff:.2%}\n\n'
         return msg
 
-    def efficiency_csv(self, relative=True):
+    def efficiency_csv(self, relative=True, expected_yield=None):
         efficiency = self.efficiency(relative)
-        efficiency = [f'{e:.2%}' if e != -1.0 else 'NA' for e in efficiency ]
+        if expected_yield is not None:
+            efficiency = [f'{e*expected_yield:.2f}' if e != -1.0 else 'NA' for e in efficiency]
+        else:
+            efficiency = [f'{e:.2%}' if e != -1.0 else 'NA' for e in efficiency]
         return ','.join(efficiency)
         
 
@@ -155,6 +158,8 @@ def parse_args(func, default_out):
     csv_eff_output.unlink(missing_ok=True)
     csv_abs_eff_output = output_dir / 'absolute_efficiency.csv'
     csv_abs_eff_output.unlink(missing_ok=True)
+    csv_yield_output = output_dir / 'yield.csv'
+    csv_yield_output.unlink(missing_ok=True)
 
     cross_section_path = Path(__file__).parent.absolute() / 'cross_section.yaml'
     luminosity_path = Path(__file__).parent.absolute() / 'lumi.yaml'
@@ -202,7 +207,7 @@ def parse_args(func, default_out):
                 pipes.append(p_output)
                 std_pipe_out, std_pipe_in = Pipe()
                 std_pipes.append(std_pipe_out)
-                proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in, cut_values, csv_eff_output, csv_abs_eff_output, lock))
+                proc_args.append((input, output, args.cuts, args.n_events, args.energy, luminosity, cross_section, p_input, std_pipe_in, cut_values, csv_eff_output, csv_abs_eff_output, csv_yield_output, lock))
             if args.debug:
                 for p_args in proc_args:
                     func(*p_args, debug=True)
