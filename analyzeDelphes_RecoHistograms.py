@@ -49,6 +49,8 @@ def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]]
     h_j2_cosTheta = TH1F('j2_cosTheta', 'j2_cosTheta;cos(\\theta);Events', 20, -1, 1)
     h_j1_pT = TH1F('j1_pT', 'j1_pT;pT(GeV);Events', 20, 0, 1500)
     h_j2_pT = TH1F('j2_pT', 'j2_pT;pT(GeV);Events', 20, 0, 1500)
+    h_j1_M = TH1F('j1_M', 'j1_M; M(GeV);Events', 20, 0, 250)
+    h_j2_M = TH1F('j2_M', 'j2_M; M(GeV);Events', 20, 0, 250)
     h_jj_deltaR = TH1F('jj_deltaR', 'jj_deltaR;\\DeltaR{j1, j2};Events', 20, 0, 3.2)
     h_jj_M = TH1F('jj_M', 'jj_M;M(GeV);Events', 600, 0, 6000)
     h_jj_pT = TH1F('jj_pT', 'jj_pT;pT(GeV);Events', 30, 0, 3000)
@@ -117,9 +119,12 @@ def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]]
         if jet_1:
             h_j1_cosTheta.Fill(cosTheta(jet_1))
             h_j1_pT.Fill(jet_1.PT)
+            h_j1_M.Fill(jet_1.Mass)
+
         if jet_2:
             h_j2_pT.Fill(jet_2.PT)
             h_j2_cosTheta.Fill(cosTheta(jet_2))
+            h_j2_M.Fill(jet_2.Mass)
 
         if jet_1 and jet_2:
             h_jj_deltaR.Fill(deltaR(jet_1, jet_2))
