@@ -7,7 +7,7 @@ function version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$
 export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase
 source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh --quiet
 if [ "${ROOTSYS}" = "" ]; then
-    lsetup "views LCG_101 x86_64-centos7-gcc8-opt" --quiet
+    lsetup "views LCG_101_ATLAS_7 x86_64-centos7-gcc11-opt" --quiet
 else
     root_version=`root-config --version`
     if version_gt 6.20 $root_version; then

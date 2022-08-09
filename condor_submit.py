@@ -4,6 +4,7 @@ import subprocess
 import uuid
 import os
 import stat
+import sys 
 
 def main():
     parser = argparse.ArgumentParser()
@@ -21,10 +22,12 @@ def main():
     condor_dir = Path('condor')
     condor_dir.mkdir(exist_ok=True, parents=True)
 
-    setup_text = """#!/bin/bash\nshopt -s expand_aliases\nalias setupATLAS='source ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh'\nsetupATLAS\nlsetup "views LCG_101 x86_64-centos7-gcc8-opt" """
+    # setup_text = """#!/bin/bash\nshopt -s expand_aliases\nsource /cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/user/atlasLocalSetup.sh\nlsetup "views LCG_101_ATLAS_7 x86_64-centos7-gcc11-opt" """
     python_script = Path(args.python_script).absolute()
-    python_text = f"python {python_script} {args.python_args}"
-    run_text = f"""{setup_text}\n{python_text}"""
+    python_path = sys.executable
+    # python_text = f"{python_path} {python_script} {args.python_args}"
+    # run_text = f"""{setup_text}\n{python_text}"""
+    run_text = f"{python_path} {python_script} {args.python_args}"
     unique_id = uuid.uuid4().hex
     run_file = (condor_dir / f'{unique_id}.sh').absolute()
     with run_file.open('w') as fd:
