@@ -33,7 +33,7 @@ def cosTheta(jet):
     return jet.P4().CosTheta()
 
 # csv_eff_output: Path = None, csv_abs_eff_output: Path = None, lock: Lock = None, 
-def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, cut_values: dict = {}, csv_eff_output: Path = None, csv_abs_eff_output: Path = None, lock = None, debug: bool = False):
+def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]], n_events: int, energy: float, luminosity: float, cross_section: float, pipe: Connection, std_pipe: Connection, cut_values: dict = {}, csv_eff_output: Path = None, csv_abs_eff_output: Path = None, csv_yield_output: Path = None, lock = None, debug: bool = False):
     process_name = Path(output).stem
     f=TFile(input)
     print(f'Writing to {output}...')
@@ -139,13 +139,10 @@ def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]]
         msg = selection.efficiency_msg()
         std_pipe.send(msg)
 
-    def write_csv(out_path, relative):
+    def write_csv(out_path, relative, expected_yield=None):
         if out_path:
-            csv = selection.efficiency_csv(relative=relative)
+            csv = selection.efficiency_csv(relative=relative, expected_yield=expected_yield)
             csv = process_name + ',' + csv + '\n'
-            print(f'writing {csv}')
-            print(out_path)
-            print(lock)
             if not debug:
                 assert lock is not None
                 lock.acquire()
@@ -157,6 +154,9 @@ def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]]
                 lock.release()
     write_csv(out_path=csv_eff_output, relative=True)
     write_csv(out_path=csv_abs_eff_output, relative=False)
+
+    expected_yield = luminosity * cross_section
+    write_csv(out_path=csv_yield_output, relative=False, expected_yield=expected_yield)
 
     output.Write()
     scale(output, luminosity, cross_section, n_events)

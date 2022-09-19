@@ -1,0 +1,12 @@
+inputs:
+  heavy_higgs_500GeV_6TeV.root:
+    title: "500 GeV"
+  heavy_higgs_1000GeV_6TeV.root:
+    title: "1000 GeV"
+  heavy_higgs_2000GeV_6TeV.root:
+    title: "2000 GeV"
+  heavy_higgs_3000GeV_6TeV.root:
+    title: "3000 GeV"
+output: results/heavy_higgs/bsm.pdf
+normalize: False
+prefix: heavy_higgs/all
