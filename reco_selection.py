@@ -9,7 +9,7 @@ def get_cuts(max_leptons: str = '0', min_jets: str = '2', min_M_miss: str = '200
     pt2_min = float(pt2_min)
     mass_min = float(mass_min)
     reco_cuts = []
-    reco_cuts.append(Cut(f'n(leptons) <= {max_leptons}', lambda d: d['n_leptons'] == max_leptons))
+    reco_cuts.append(Cut(f'n(leptons) = {max_leptons}', lambda d: d['n_leptons'] == max_leptons))
     reco_cuts.append(Cut(f'n(jets) >= {min_jets}', lambda d: d['n_jets'] >= min_jets))
     reco_cuts.append(Cut(f'M_miss > {min_M_miss} GeV', lambda d: d['missing_mass'] > min_M_miss))
     reco_cuts.append(Cut(f'|cos(theta_j)| < {max_cos_theta}', lambda d: all(abs(d[f'jet_{i}'].P4().CosTheta()) < max_cos_theta for i in (1,2))))
