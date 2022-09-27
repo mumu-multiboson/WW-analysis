@@ -47,8 +47,8 @@ def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]]
 
     h_j1_cosTheta = TH1F('j1_cosTheta', 'j1_cosTheta;cos(\\theta);Events', 20, -1, 1)
     h_j2_cosTheta = TH1F('j2_cosTheta', 'j2_cosTheta;cos(\\theta);Events', 20, -1, 1)
-    h_j1_pT = TH1F('j1_pT', 'j1_pT;pT(GeV);Events', 20, 0, 1500)
-    h_j2_pT = TH1F('j2_pT', 'j2_pT;pT(GeV);Events', 20, 0, 1500)
+    h_j1_pT = TH1F('j1_pT', 'j1_pT;pT(GeV);Events', 30, 0, 3000)
+    h_j2_pT = TH1F('j2_pT', 'j2_pT;pT(GeV);Events', 30, 0, 3000)
     h_j1_M = TH1F('j1_M', 'j1_M; M(GeV);Events', 20, 0, 250)
     h_j2_M = TH1F('j2_M', 'j2_M; M(GeV);Events', 20, 0, 250)
     h_jj_deltaR = TH1F('jj_deltaR', 'jj_deltaR;\\DeltaR{j1, j2};Events', 20, 0, 3.2)
@@ -87,7 +87,7 @@ def write_histogram(input: str, output: str, cut_indices: Union[None, List[int]]
 
         # Collect jets.
         jets = tree.VLCjetR10_inclusive
-        n_jets = len(jets)
+	n_jets = len(jets)
         if n_jets >= 2:
             jet_1 = jets[0]
             jet_2 = jets[1]
