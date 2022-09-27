@@ -10,8 +10,10 @@ def rebin(root_files: Path, out_path: Path, var_name: str):
     out_path.mkdir(parents=True, exist_ok=True)
 
     # define the binning
-    mjj_bins = array.array('d',[0,200,400,600,800,1000,1200,1500,2000,3000,4000,6000])
-
+    mjj_bins = array.array('d',[0,200,400,600,800,1000,1200,1500,2000,3000,4000,6000]) #6tev
+    #mjj_bins = array.array('d',[0,200,400,600,800,1000,1200,1500,2000,3000,4000,6000,8000,10000]) #10tev
+    #mjj_bins = array.array('d',[0,200,400,600,800,1000,1200,1500,2000,4000,7000,10000,14000,18000,24000,30000]) #30tev
+    
     print("====== Event Yields ========")
     for root_file in root_files:
         inFile = ROOT.TFile(str(root_file), 'r')
