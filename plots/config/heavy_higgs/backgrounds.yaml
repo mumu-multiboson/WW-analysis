@@ -1,0 +1,12 @@
+inputs:
+  ggwpwm.root:
+    title: "ggwpwm"
+  wpwmz_ztonunu.root:
+    title: "wpwmz"
+  wzmunu.root:
+    title: "wzmunu"
+  zzmumu.root:
+    title: "zzmumu"
+output: /eos/user/a/aschuy/public/muon_collider/plots/heavy_higgs/6tev/3tev/backgrounds.pdf
+prefix: /eos/user/a/aschuy/public/muon_collider/histograms/heavy_higgs/6tev
+normalize: False

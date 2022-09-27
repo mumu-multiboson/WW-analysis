@@ -33,3 +33,13 @@ heavy_higgs_1000GeV_6TeV: 12.69
 heavy_higgs_2000GeV_6TeV: 40.41
 heavy_higgs_3000GeV_6TeV: 48.31
 heavy_higgs_500GeV_6TeV: 38.17
+wpwm_30tev: 844.6
+wpwm_mumu_30tev: 1379.3
+wpwmz_30tev: 3.140
+wzmunu_30tev: 913.6
+zz_30tev: 1.213
+wpwm_10tev: 404.2
+wpwm_mumu_10tev: 735.8
+wpwmz_10tev: 10.46
+wzmunu_10tev: 438.3
+zz_10tev: 0.9480

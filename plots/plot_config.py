@@ -2,8 +2,10 @@ from typing import List
 from ROOT import *
 from pathlib import Path
 import yaml
-
+# gROOT.SetStyle('ATLAS')
 gStyle.SetOptStat(1111)
+
+palette = [40, 41, 42, 30, 46, 38, 28, 36]
 
 def normalize_h(h, normalize):
     if normalize:
@@ -44,7 +46,7 @@ def plot(paths: List[Path], out_name: str, titles: List[str] = None, normalize: 
                     h.Draw("sames,E")
                     if len(tfiles) == 1:
                         gPad.Update()
-                    h.SetLineColor(j+2)
+                    h.SetLineColor(palette[j%len(palette)])
                     if len(tfiles) > 1:
                         leg.AddEntry(h, titles[j])
                 except:
