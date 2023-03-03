@@ -1,0 +1,8 @@
+executable = {executable}
+getenv = True
+arguments = {out_file} {in_file} {energy}
+output = {condor_dir}/output/$(ClusterId).$(ProcId).out
+error = {condor_dir}/error/$(ClusterId).$(ProcId).err
+log = {condor_dir}/condor/$(ClusterId).log
++JobFlavour = "espresso"
+queue

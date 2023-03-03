@@ -167,6 +167,7 @@ def parse_args(func, default_out):
     
     with cross_section_path.open('r') as f:
         cross_sections = yaml.load(f, Loader=yaml.SafeLoader)
+        cross_sections = {k.lower(): v for k,v in cross_sections.items()}
     with luminosity_path.open('r') as f:
         luminosities = yaml.load(f, Loader=yaml.SafeLoader)
     try:
@@ -197,7 +198,7 @@ def parse_args(func, default_out):
                     input = str(Path(input) / 'Events' / 'run_01' / 'unweighted_events.root')
                 process = Path(output).stem
                 try:
-                    cross_section = cross_sections[process]
+                    cross_section = cross_sections[process.lower()]
                 except:
                     logging.error(f'"{process}" not found in {cross_section_path}!')
                     raise
